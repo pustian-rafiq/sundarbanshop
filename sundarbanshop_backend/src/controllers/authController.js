@@ -1,6 +1,7 @@
 const User = require("../models/user");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const { generateToken } = require("../middlewares/generateToken");
 
 const register = async (req, res, next) => {
   try {
@@ -58,7 +59,42 @@ const verifyToken = async (req, res) => {
     res.status(500).json({ message: "Email Verificatioion Failed" });
   }
 };
-const login = (req, res, next) => {};
+const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if the user exists or not
+    const user = await User.findOne({ email });
+    if (!user) {
+      res
+        .status(401)
+        .json({ success: false, message: "Invalid username or password!" });
+    }
+
+    // Check if the password is correct
+    if (user.password !== password) {
+      res
+        .status(401)
+        .json({ success: false, message: "Invalid username or password!" });
+    }
+    console.log(user);
+
+    // generate a token
+    const token = generateToken(user._id);
+    // console.log(token);
+
+    res.status(200).json({
+      success: true,
+      message: "Login successful!",
+      user: {
+        ...user?._doc,
+        token: generateToken(user._id),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 const sendVerificationEmail = async (email, verificationToken) => {
   //create a  nodemailer transporter
